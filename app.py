@@ -2,43 +2,43 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-import streamlit as st
+# --- Page Configuration ---
+st.set_page_config(page_title="NexusRank 360", page_icon="🌐", layout="wide")
 
-# Title and introduction
-st.title("NexusRank360: Big Data-Driven MOORA System for Advanced Ranking")
-st.markdown("""
-This app evaluates and ranks alternatives using the **MOORA (Multi-Objective Optimization by Ratio Analysis) method**.
-MOORA is applied to rank decision alternatives based on multiple criteria.
-""")
-
-# Provide a step-by-step explanation of the MOORA method
-st.subheader("MOORA Method: Step-by-Step Explanation")
-
-st.markdown("""
-1. **Problem Definition**:
-   - Identify the decision alternatives and the criteria on which they will be evaluated.
-   - Alternatives could be different entities, such as companies or projects, and criteria could be factors like cost, performance, etc.
-
-2. **Construct the Decision Matrix**:
-   - Create a decision matrix where rows represent alternatives, and columns represent criteria. Each cell in the matrix represents how an alternative performs on a given criterion.
-
-3. **Normalize the Decision Matrix**:
-   - Normalize each criterion to make sure all criteria contribute equally, regardless of their units of measurement. 
-     - **For Benefit Criteria**: Normalize by dividing each value by the Euclidean norm.
-     - **For Cost Criteria**: Normalize by dividing the Euclidean norm by each value.
-
-4. **Apply Weights**:
-   - Assign weights to the criteria based on their importance. Multiply each normalized value by its corresponding weight to get the weighted normalized matrix.
-
-5. **Calculate the MOORA Score**:
-   - The MOORA Score for each alternative is calculated as the sum of the weighted normalized values across all criteria. Higher MOORA Scores indicate better-performing alternatives.
-
-6. **Rank the Alternatives**:
-   - Rank the alternatives based on their MOORA Scores. The alternative with the highest score is considered the best.
-
-7. **Sensitivity Analysis** (Optional):
-   - Perform sensitivity analysis to see how changes in criteria weights or values affect the rankings. This can help assess the stability and reliability of the rankings.
-""")
+# --- Helper Function for MOORA ---
+def moora_method(df, weights, criteria_types):
+    """
+    Performs the standard MOORA method calculation and returns all intermediate steps.
+    """
+    # Step 1: Normalization (Vector Normalization)
+    norm_df = df.copy()
+    for col in df.columns:
+        # Calculate the root of the sum of squares for the column
+        denominator = np.sqrt((df[col]**2).sum())
+        # Avoid division by zero if a column is all zeros
+        if denominator == 0:
+            norm_df[col] = 0
+        else:
+            norm_df[col] = df[col] / denominator
+    
+    # Step 2: Weighted Normalization
+    weighted_df = norm_df.copy()
+    for col in weighted_df.columns:
+        weighted_df[col] *= weights[col]
+        
+    # Step 3: Calculate Performance Score (Yi)
+    scores = []
+    for i in range(len(weighted_df)):
+        benefit_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'Benefit')
+        cost_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'Cost')
+        scores.append(benefit_score - cost_score)
+        
+    # Step 4: Create Final DataFrame with Scores and Ranks
+    result_df = pd.DataFrame({'MOORA Score': scores}, index=df.index)
+    result_df['Rank'] = result_df['MOORA Score'].rank(ascending=False).astype(int)
+    
+    # Return the final result AND the intermediate tables for display
+    return result_df.sort_values(by='Rank'), norm_df, weighted_df
 
 # --- Main Application UI ---
 st.title("NexusRank360: Big Data-Driven MOORA System")
@@ -50,7 +50,6 @@ Upload your data to begin.
 uploaded_file = st.file_uploader("Upload your Excel or CSV file", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
-    # Load data from the uploaded file
     try:
         df_input = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
 
@@ -60,7 +59,6 @@ if uploaded_file is not None:
         # --- User Configuration using columns for a clean layout ---
         st.sidebar.header("Configuration")
         
-        # FIX 1: Explicitly separate Alternative from Criteria columns
         alt_col = st.sidebar.selectbox(
             "1. Select your 'Alternative' column (non-numeric)",
             options=df_input.columns
@@ -72,7 +70,6 @@ if uploaded_file is not None:
         )
 
         if criteria_cols:
-            # Create a clean DataFrame with only the numeric criteria
             df_criteria = df_input.set_index(alt_col)[criteria_cols]
 
             st.sidebar.subheader("3. Set Weights and Impacts")
@@ -86,21 +83,51 @@ if uploaded_file is not None:
                 st.sidebar.markdown("---")
 
             if st.sidebar.button("🚀 Calculate Ranks", type="primary", use_container_width=True):
-                # Perform calculation and display results
+                # Perform calculation
+                # The function now returns 3 tables, so we unpack them
+                final_ranking, norm_df, weighted_df = moora_method(df_criteria, weights, impacts)
+                
+                # --- DISPLAY FINAL RESULTS ---
                 st.write("### MOORA Ranking Results")
-                
-                final_ranking = moora_method(df_criteria, weights, impacts)
-                
-                # Display results with gradient coloring
                 st.dataframe(
                     final_ranking.style.format({'MOORA Score': "{:.4f}"})
                                       .background_gradient(cmap='viridis_r', subset=['Rank']),
                     use_container_width=True
                 )
                 
-                # Plot the ranking
                 st.write("### Ranking Visualization")
                 st.bar_chart(final_ranking[['MOORA Score']])
+
+                # --- NEW: EXPANDER FOR STEP-BY-STEP OUTPUT ---
+                with st.expander("Show Detailed Calculation Steps (360° View)"):
+                    st.subheader("Step 0: Initial Decision Matrix & Configuration")
+                    st.markdown("This is the raw numeric data and user inputs used for the calculation.")
+                    
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write("User-defined Weights:")
+                        st.json(weights)
+                    with col2:
+                        st.write("User-defined Impacts:")
+                        st.json(impacts)
+                    
+                    st.write("Decision Matrix:")
+                    st.dataframe(df_criteria)
+                    st.markdown("---")
+                    
+                    st.subheader("Step 1: Normalized Matrix")
+                    st.markdown("Each value is normalized using the formula: `x / sqrt(sum(x^2))` for its column.")
+                    st.dataframe(norm_df.style.format("{:.4f}"))
+                    st.markdown("---")
+
+                    st.subheader("Step 2: Weighted Normalized Matrix")
+                    st.markdown("Each normalized value is multiplied by its corresponding criterion weight.")
+                    st.dataframe(weighted_df.style.format("{:.4f}"))
+                    st.markdown("---")
+
+                    st.subheader("Step 3 & 4: Performance Scores & Final Rank")
+                    st.markdown("The final score is `Sum(Benefit Criteria) - Sum(Cost Criteria)`. The ranks are based on these scores.")
+                    st.dataframe(final_ranking.style.format({'MOORA Score': "{:.4f}"}))
 
         else:
             st.info("Please select your criteria columns in the sidebar to proceed.")
