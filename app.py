@@ -10,34 +10,31 @@ def moora_method(df, weights, criteria_types):
     """
     Performs the standard MOORA method calculation and returns all intermediate steps.
     """
-    # Step 1: Normalization (Vector Normalization)
+    # Normalization (Vector Normalization)
     norm_df = df.copy()
     for col in df.columns:
-        # Calculate the root of the sum of squares for the column
         denominator = np.sqrt((df[col]**2).sum())
-        # Avoid division by zero if a column is all zeros
         if denominator == 0:
             norm_df[col] = 0
         else:
             norm_df[col] = df[col] / denominator
     
-    # Step 2: Weighted Normalization
+    # Weighted Normalization
     weighted_df = norm_df.copy()
     for col in weighted_df.columns:
         weighted_df[col] *= weights[col]
         
-    # Step 3: Calculate Performance Score (Yi)
+    # Calculate Performance Score (Yi)
     scores = []
     for i in range(len(weighted_df)):
         benefit_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'Benefit')
         cost_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'Cost')
         scores.append(benefit_score - cost_score)
         
-    # Step 4: Create Final DataFrame with Scores and Ranks
+    # Create Final DataFrame with Scores and Ranks
     result_df = pd.DataFrame({'MOORA Score': scores}, index=df.index)
     result_df['Rank'] = result_df['MOORA Score'].rank(ascending=False).astype(int)
     
-    # Return the final result AND the intermediate tables for display
     return result_df.sort_values(by='Rank'), norm_df, weighted_df
 
 # --- Main Application UI ---
@@ -56,16 +53,15 @@ if uploaded_file is not None:
         st.write("### Data Preview:")
         st.dataframe(df_input.head())
 
-        # --- User Configuration using columns for a clean layout ---
         st.sidebar.header("Configuration")
         
         alt_col = st.sidebar.selectbox(
-            "1. Select your 'Alternative' column (non-numeric)",
+            "1. Select your 'Alternative' column",
             options=df_input.columns
         )
         
         criteria_cols = st.sidebar.multiselect(
-            "2. Select your 'Criteria' columns (must be numeric)",
+            "2. Select your 'Criteria' columns",
             options=[col for col in df_input.columns if col != alt_col and pd.api.types.is_numeric_dtype(df_input[col])]
         )
 
@@ -83,11 +79,8 @@ if uploaded_file is not None:
                 st.sidebar.markdown("---")
 
             if st.sidebar.button("🚀 Calculate Ranks", type="primary", use_container_width=True):
-                # Perform calculation
-                # The function now returns 3 tables, so we unpack them
                 final_ranking, norm_df, weighted_df = moora_method(df_criteria, weights, impacts)
                 
-                # --- DISPLAY FINAL RESULTS ---
                 st.write("### MOORA Ranking Results")
                 st.dataframe(
                     final_ranking.style.format({'MOORA Score': "{:.4f}"})
@@ -98,9 +91,10 @@ if uploaded_file is not None:
                 st.write("### Ranking Visualization")
                 st.bar_chart(final_ranking[['MOORA Score']])
 
-                # --- NEW: EXPANDER FOR STEP-BY-STEP OUTPUT ---
+                # --- EXPANDER SECTION WITH CORRECTED STEP NUMBERS ---
                 with st.expander("Show Detailed Calculation Steps (360° View)"):
-                    st.subheader("Step 0: Initial Decision Matrix & Configuration")
+                    # Step 1
+                    st.subheader("Step 1: Initial Decision Matrix & Configuration")
                     st.markdown("This is the raw numeric data and user inputs used for the calculation.")
                     
                     col1, col2 = st.columns(2)
@@ -115,17 +109,20 @@ if uploaded_file is not None:
                     st.dataframe(df_criteria)
                     st.markdown("---")
                     
-                    st.subheader("Step 1: Normalized Matrix")
+                    # Step 2
+                    st.subheader("Step 2: Normalized Matrix")
                     st.markdown("Each value is normalized using the formula: `x / sqrt(sum(x^2))` for its column.")
                     st.dataframe(norm_df.style.format("{:.4f}"))
                     st.markdown("---")
 
-                    st.subheader("Step 2: Weighted Normalized Matrix")
+                    # Step 3
+                    st.subheader("Step 3: Weighted Normalized Matrix")
                     st.markdown("Each normalized value is multiplied by its corresponding criterion weight.")
                     st.dataframe(weighted_df.style.format("{:.4f}"))
                     st.markdown("---")
 
-                    st.subheader("Step 3 & 4: Performance Scores & Final Rank")
+                    # Step 4
+                    st.subheader("Step 4: Performance Scores & Final Rank")
                     st.markdown("The final score is `Sum(Benefit Criteria) - Sum(Cost Criteria)`. The ranks are based on these scores.")
                     st.dataframe(final_ranking.style.format({'MOORA Score': "{:.4f}"}))
 
