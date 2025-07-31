@@ -2,64 +2,43 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-# Display Step-by-Step Tables
-st.subheader("Step-by-Step MOORA Process")
+import streamlit as st
 
-# Show Input Data Table
-st.write("**Input Data**")
-st.write(df)
+# Title and introduction
+st.title("NexusRank360: Big Data-Driven MOORA System for Advanced Ranking")
+st.markdown("""
+This app evaluates and ranks alternatives using the **MOORA (Multi-Objective Optimization by Ratio Analysis) method**.
+MOORA is applied to rank decision alternatives based on multiple criteria.
+""")
 
-# Show Normalized Data Table
-st.write("**Normalized Data**")
-st.write(normalized_df)
+# Provide a step-by-step explanation of the MOORA method
+st.subheader("MOORA Method: Step-by-Step Explanation")
 
-# Show Weighted Normalized Data Table
-weighted_matrix = normalized_df * weights
-df['Weighted Normalized'] = weighted_matrix.sum(axis=1)
-st.write("**Weighted Normalized Data**")
-st.write(weighted_matrix)
+st.markdown("""
+1. **Problem Definition**:
+   - Identify the decision alternatives and the criteria on which they will be evaluated.
+   - Alternatives could be different entities, such as companies or projects, and criteria could be factors like cost, performance, etc.
 
-# Show MOORA Score Table
-df['MOORA Score'] = weighted_matrix.sum(axis=1)
-st.write("**MOORA Score**")
-st.write(df[['Alternative', 'MOORA Score']])
+2. **Construct the Decision Matrix**:
+   - Create a decision matrix where rows represent alternatives, and columns represent criteria. Each cell in the matrix represents how an alternative performs on a given criterion.
 
-# Final Ranking
-df_sorted = df.sort_values(by='MOORA Score', ascending=False)
-st.write("**Final Ranking**")
-st.write(df_sorted[['Alternative', 'MOORA Score']])
+3. **Normalize the Decision Matrix**:
+   - Normalize each criterion to make sure all criteria contribute equally, regardless of their units of measurement. 
+     - **For Benefit Criteria**: Normalize by dividing each value by the Euclidean norm.
+     - **For Cost Criteria**: Normalize by dividing the Euclidean norm by each value.
 
+4. **Apply Weights**:
+   - Assign weights to the criteria based on their importance. Multiply each normalized value by its corresponding weight to get the weighted normalized matrix.
 
-# --- Page Configuration ---
-st.set_page_config(page_title="NexusRank 360", page_icon="🌐", layout="wide")
+5. **Calculate the MOORA Score**:
+   - The MOORA Score for each alternative is calculated as the sum of the weighted normalized values across all criteria. Higher MOORA Scores indicate better-performing alternatives.
 
-# --- Helper Function for MOORA (Correct & Standard Implementation) ---
-def moora_method(df, weights, criteria_types):
-    """
-    Performs the standard MOORA method calculation.
-    """
-    # 1. Normalization (Vector Normalization)
-    norm_df = df.copy()
-    for col in df.columns:
-        norm_df[col] = df[col] / np.sqrt((df[col]**2).sum())
-    
-    # 2. Weighted Normalization
-    weighted_df = norm_df.copy()
-    for col in weighted_df.columns:
-        weighted_df[col] *= weights[col]
-        
-    # 3. Calculate Performance Score (Yi)
-    scores = []
-    for i in range(len(weighted_df)):
-        # Use 'Benefit' and 'Cost' terms as per the UI
-        benefit_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'Benefit')
-        cost_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'Cost')
-        scores.append(benefit_score - cost_score)
-        
-    # 4. Create Final DataFrame with Scores and Ranks
-    result_df = pd.DataFrame({'MOORA Score': scores}, index=df.index)
-    result_df['Rank'] = result_df['MOORA Score'].rank(ascending=False).astype(int)
-    return result_df.sort_values(by='Rank')
+6. **Rank the Alternatives**:
+   - Rank the alternatives based on their MOORA Scores. The alternative with the highest score is considered the best.
+
+7. **Sensitivity Analysis** (Optional):
+   - Perform sensitivity analysis to see how changes in criteria weights or values affect the rankings. This can help assess the stability and reliability of the rankings.
+""")
 
 # --- Main Application UI ---
 st.title("NexusRank360: Big Data-Driven MOORA System")
