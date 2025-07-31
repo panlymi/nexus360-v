@@ -2,43 +2,32 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 
-import streamlit as st
+# Display Step-by-Step Tables
+st.subheader("Step-by-Step MOORA Process")
 
-# Title and introduction
-st.title("NexusRank360: Big Data-Driven MOORA System for Advanced Ranking")
-st.markdown("""
-This app evaluates and ranks alternatives using the **MOORA (Multi-Objective Optimization by Ratio Analysis) method**.
-MOORA is applied to rank decision alternatives based on multiple criteria.
-""")
+# Show Input Data Table
+st.write("**Input Data**")
+st.write(df)
 
-# Provide a step-by-step explanation of the MOORA method
-st.subheader("MOORA Method: Step-by-Step Explanation")
+# Show Normalized Data Table
+st.write("**Normalized Data**")
+st.write(normalized_df)
 
-st.markdown("""
-1. **Problem Definition**:
-   - Identify the decision alternatives and the criteria on which they will be evaluated.
-   - Alternatives could be different entities, such as companies or projects, and criteria could be factors like cost, performance, etc.
+# Show Weighted Normalized Data Table
+weighted_matrix = normalized_df * weights
+df['Weighted Normalized'] = weighted_matrix.sum(axis=1)
+st.write("**Weighted Normalized Data**")
+st.write(weighted_matrix)
 
-2. **Construct the Decision Matrix**:
-   - Create a decision matrix where rows represent alternatives, and columns represent criteria. Each cell in the matrix represents how an alternative performs on a given criterion.
+# Show MOORA Score Table
+df['MOORA Score'] = weighted_matrix.sum(axis=1)
+st.write("**MOORA Score**")
+st.write(df[['Alternative', 'MOORA Score']])
 
-3. **Normalize the Decision Matrix**:
-   - Normalize each criterion to make sure all criteria contribute equally, regardless of their units of measurement. 
-     - **For Benefit Criteria**: Normalize by dividing each value by the Euclidean norm.
-     - **For Cost Criteria**: Normalize by dividing the Euclidean norm by each value.
-
-4. **Apply Weights**:
-   - Assign weights to the criteria based on their importance. Multiply each normalized value by its corresponding weight to get the weighted normalized matrix.
-
-5. **Calculate the MOORA Score**:
-   - The MOORA Score for each alternative is calculated as the sum of the weighted normalized values across all criteria. Higher MOORA Scores indicate better-performing alternatives.
-
-6. **Rank the Alternatives**:
-   - Rank the alternatives based on their MOORA Scores. The alternative with the highest score is considered the best.
-
-7. **Sensitivity Analysis** (Optional):
-   - Perform sensitivity analysis to see how changes in criteria weights or values affect the rankings. This can help assess the stability and reliability of the rankings.
-""")
+# Final Ranking
+df_sorted = df.sort_values(by='MOORA Score', ascending=False)
+st.write("**Final Ranking**")
+st.write(df_sorted[['Alternative', 'MOORA Score']])
 
 
 # --- Page Configuration ---
