@@ -44,10 +44,15 @@ if uploaded_file is not None:
         # Handle NaN values by filling them with zero (or any other strategy)
         normalized_df[col].fillna(0, inplace=True)
         
+        # Compute the normalization: benefit or cost
         if impacts[criteria.index(col)] == "Benefit":
-            normalized_df[col] = df[col] / np.sqrt((df[col]**2).sum())
+            # Normalize by dividing by the Euclidean norm of the column
+            column_norm = np.sqrt((df[col] ** 2).sum())
+            normalized_df[col] = df[col] / column_norm if column_norm != 0 else 0
         else:
-            normalized_df[col] = np.sqrt((df[col]**2).sum()) / df[col]
+            # Normalize by dividing the Euclidean norm of the column by each value
+            column_norm = np.sqrt((df[col] ** 2).sum())
+            normalized_df[col] = column_norm / df[col] if column_norm != 0 else 0
     
     # Apply the MOORA method (weighted sum)
     weighted_matrix = normalized_df * weights
