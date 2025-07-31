@@ -26,23 +26,29 @@ if uploaded_file is not None:
     criteria = df.columns.tolist()
     weights = []
     impacts = []
-
+    
     for col in criteria:
         weight = st.sidebar.slider(f"Weight for {col}", 0.0, 1.0, 0.1)
         weight = round(weight, 2)
         weights.append(weight)
-
+        
         impact = st.sidebar.radio(f"Impact for {col} (Benefit or Cost)", options=["Benefit", "Cost"], key=f"{col}_impact")
         impacts.append(impact)
 
-    # Normalize data
+    # Normalize data with error handling for non-numeric values
     normalized_df = df.copy()
     for col in criteria:
+        # Ensure the column is numeric
+        normalized_df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        # Handle NaN values by filling them with zero (or any other strategy)
+        normalized_df[col].fillna(0, inplace=True)
+        
         if impacts[criteria.index(col)] == "Benefit":
             normalized_df[col] = df[col] / np.sqrt((df[col]**2).sum())
         else:
             normalized_df[col] = np.sqrt((df[col]**2).sum()) / df[col]
-
+    
     # Apply the MOORA method (weighted sum)
     weighted_matrix = normalized_df * weights
     df['MOORA Score'] = weighted_matrix.sum(axis=1)
