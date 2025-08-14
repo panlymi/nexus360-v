@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 
 # --- Page Configuration ---
-st.set_page_config(page_title="NexusRank 360", page_icon="🌐", layout="wide")
+st.set_page_config(page_title="Empowering Sustainable Futures", page_icon="🌐", layout="wide")
 
 # --- Helper Function for MOORA (Correct & Standard Implementation) ---
 def moora_method(df, weights, criteria_types):
@@ -34,7 +34,9 @@ def moora_method(df, weights, criteria_types):
     return result_df.sort_values(by='Rank')
 
 # --- Main Application UI ---
-st.title("NexusRank360: Big Data-Driven MOORA System")
+# NEW LINES
+st.title("Empowering Sustainable Futures with Big Data")
+st.subheader("A Smart Framework for Ranking Complex Alternatives using MOORA")
 st.markdown("""
 This app evaluates and ranks alternatives using the **MOORA (Multi-Objective Optimization by Ratio Analysis) method**.
 Upload your data to begin.
