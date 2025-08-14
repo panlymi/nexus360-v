@@ -3,134 +3,113 @@ import pandas as pd
 import numpy as np
 
 # --- Page Configuration ---
-st.set_page_config(page_title="NexusRank 360", page_icon="🌐", layout="wide")
+st.set_page_config(page_title="Empowering Sustainable Futures with Big Data", page_icon="🌐", layout="centered")
 
-# --- Helper Function for MOORA ---
+# --- Helper Function for MOORA (Unchanged) ---
 def moora_method(df, weights, criteria_types):
     """
-    Performs the standard MOORA method calculation and returns all intermediate steps.
+    Performs the MOORA method calculation.
     """
-    # Normalization (Vector Normalization)
+    # 1. Normalization
     norm_df = df.copy()
     for col in df.columns:
-        denominator = np.sqrt((df[col]**2).sum())
-        if denominator == 0:
-            norm_df[col] = 0
-        else:
-            norm_df[col] = df[col] / denominator
+        norm_df[col] = df[col] / np.sqrt((df[col]**2).sum())
     
-    # Weighted Normalization
+    # 2. Weighted Normalization
     weighted_df = norm_df.copy()
     for col in weighted_df.columns:
         weighted_df[col] *= weights[col]
         
-    # Calculate Performance Score (Yi)
+    # 3. Calculate Performance Score (Yi)
     scores = []
     for i in range(len(weighted_df)):
-        benefit_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'Benefit')
-        cost_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'Cost')
+        benefit_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'positive')
+        cost_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'negative')
         scores.append(benefit_score - cost_score)
         
-    # Create Final DataFrame with Scores and Ranks
+    # 4. Create Final DataFrame with Scores and Ranks
     result_df = pd.DataFrame({'MOORA Score': scores}, index=df.index)
     result_df['Rank'] = result_df['MOORA Score'].rank(ascending=False).astype(int)
-    
-    return result_df.sort_values(by='Rank'), norm_df, weighted_df
+    return result_df.sort_values(by='Rank')
 
 # --- Main Application UI ---
-st.title("NexusRank360: Big Data-Driven MOORA System")
-st.markdown("""
-This app evaluates and ranks alternatives using the **MOORA (Multi-Objective Optimization by Ratio Analysis) method**.
-Upload your data to begin.
-""")
 
-uploaded_file = st.file_uploader("Upload your Excel or CSV file", type=["csv", "xlsx"])
+# NEW, UPDATED TITLE AND SUBTITLE
+st.title("Empowering Sustainable Futures with Big Data")
+st.subheader("A Smart Framework for Ranking Complex Alternatives using MOORA")
+st.markdown("---") # Adds a visual separator
+
+uploaded_file = st.file_uploader(
+    "Upload your decision matrix CSV or Excel file",
+    type=["csv", "xlsx"],
+    label_visibility="collapsed"
+)
 
 if uploaded_file is not None:
     try:
-        df_input = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
-
-        st.write("### Data Preview:")
-        st.dataframe(df_input.head())
-
-        st.sidebar.header("Configuration")
-        
-        alt_col = st.sidebar.selectbox(
-            "1. Select your 'Alternative' column",
-            options=df_input.columns
-        )
-        
-        criteria_cols = st.sidebar.multiselect(
-            "2. Select your 'Criteria' columns",
-            options=[col for col in df_input.columns if col != alt_col and pd.api.types.is_numeric_dtype(df_input[col])]
-        )
-
-        if criteria_cols:
-            df_criteria = df_input.set_index(alt_col)[criteria_cols]
-
-            st.sidebar.subheader("3. Set Weights and Impacts")
-            weights = {}
-            impacts = {}
-            
-            for col in criteria_cols:
-                st.sidebar.markdown(f"**{col}**")
-                weights[col] = st.sidebar.slider(f"Weight", 0.0, 1.0, round(1/len(criteria_cols), 2), 0.01, key=f"weight_{col}")
-                impacts[col] = st.sidebar.radio(f"Impact", ["Benefit", "Cost"], key=f"impact_{col}", horizontal=True)
-                st.sidebar.markdown("---")
-
-            if st.sidebar.button("🚀 Calculate Ranks", type="primary", use_container_width=True):
-                final_ranking, norm_df, weighted_df = moora_method(df_criteria, weights, impacts)
-                
-                st.write("### MOORA Ranking Results")
-                st.dataframe(
-                    final_ranking.style.format({'MOORA Score': "{:.4f}"})
-                                      .background_gradient(cmap='viridis_r', subset=['Rank']),
-                    use_container_width=True
-                )
-                
-                st.write("### Ranking Visualization")
-                st.bar_chart(final_ranking[['MOORA Score']])
-
-                # --- EXPANDER SECTION WITH CORRECTED STEP NUMBERS ---
-                with st.expander("Show Detailed Calculation Steps (360° View)"):
-                    # Step 1
-                    st.subheader("Step 1: Initial Decision Matrix & Configuration")
-                    st.markdown("This is the raw numeric data and user inputs used for the calculation.")
-                    
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.write("User-defined Weights:")
-                        st.json(weights)
-                    with col2:
-                        st.write("User-defined Impacts:")
-                        st.json(impacts)
-                    
-                    st.write("Decision Matrix:")
-                    st.dataframe(df_criteria)
-                    st.markdown("---")
-                    
-                    # Step 2
-                    st.subheader("Step 2: Normalized Matrix")
-                    st.markdown("Each value is normalized using the formula: `x / sqrt(sum(x^2))` for its column.")
-                    st.dataframe(norm_df.style.format("{:.4f}"))
-                    st.markdown("---")
-
-                    # Step 3
-                    st.subheader("Step 3: Weighted Normalized Matrix")
-                    st.markdown("Each normalized value is multiplied by its corresponding criterion weight.")
-                    st.dataframe(weighted_df.style.format("{:.4f}"))
-                    st.markdown("---")
-
-                    # Step 4
-                    st.subheader("Step 4: Performance Scores & Final Rank")
-                    st.markdown("The final score is `Sum(Benefit Criteria) - Sum(Cost Criteria)`. The ranks are based on these scores.")
-                    st.dataframe(final_ranking.style.format({'MOORA Score': "{:.4f}"}))
-
+        if uploaded_file.name.endswith('.csv'):
+            df_input = pd.read_csv(uploaded_file)
         else:
-            st.info("Please select your criteria columns in the sidebar to proceed.")
+            df_input = pd.read_excel(uploaded_file)
+        
+        alt_col = df_input.columns[0]
+        criteria_cols = df_input.columns[1:]
+        df_criteria = df_input.set_index(alt_col)
+
+        st.write("**Uploaded Decision Matrix:**")
+        st.code(f"{uploaded_file.name}")
+        st.dataframe(df_input)
+        st.markdown("---")
+
+        st.subheader("Enter Weights for each criterion")
+        weights_input = st.text_input(
+            "Enter weights separated by commas (e.g., 0.4, 0.3, 0.2, 0.1)",
+            placeholder="e.g., 0.25, 0.25, 0.25, 0.25"
+        )
+        
+        st.subheader("Enter Impact (positive/negative) for each criterion")
+        
+        impacts = {}
+        cols = st.columns(len(criteria_cols))
+
+        for i, col_name in enumerate(criteria_cols):
+            with cols[i]:
+                impacts[col_name] = st.selectbox(
+                    f"**{col_name}**",
+                    options=["positive", "negative"],
+                    key=f"impact_{col_name}"
+                )
+        
+        st.markdown("---")
+        
+        if st.button("🚀 Calculate Final Ranks", type="primary", use_container_width=True):
+            try:
+                weights_list = [float(w.strip()) for w in weights_input.split(',')]
+                if len(weights_list) != len(criteria_cols):
+                    st.error(f"Error: You entered {len(weights_list)} weights, but there are {len(criteria_cols)} criteria. Please provide one weight for each criterion.")
+                else:
+                    weights = dict(zip(criteria_cols, weights_list))
+                    
+                    if not np.isclose(sum(weights.values()), 1.0):
+                        st.warning(f"The sum of weights is {sum(weights.values()):.2f}. It's recommended that weights sum to 1.0.")
+                    
+                    final_ranking = moora_method(df_criteria, weights, impacts)
+
+                    st.header("🏆 Final Ranking")
+                    st.dataframe(
+                        final_ranking.style.format({'MOORA Score': "{:.4f}"})
+                                  .background_gradient(cmap='viridis_r', subset=['Rank']),
+                        use_container_width=True
+                    )
+                    
+                    st.subheader("Visual Comparison of MOORA Scores")
+                    chart_data = final_ranking[['MOORA Score']].sort_values(by='MOORA Score', ascending=False)
+                    st.bar_chart(chart_data)
+
+            except ValueError:
+                st.error("Invalid input for weights. Please enter numbers separated by commas only (e.g., 0.5, 0.3, 0.2).")
+            except Exception as e:
+                st.error(f"An unexpected error occurred: {e}")
 
     except Exception as e:
-        st.error(f"An error occurred: {e}")
-        st.info("Please ensure your file format is correct and you have selected the right columns.")
-else:
-    st.warning("Please upload a file to start the analysis.")
+        st.error(f"An error occurred while reading the file: {e}")
