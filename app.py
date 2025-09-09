@@ -102,7 +102,7 @@ if uploaded_file is not None:
 
                     st.subheader("Step 2: Normalized Decision Matrix")
                     ### NEW: Updated to st.markdown for proper symbol rendering ###
-                    st.markdown("Each value ($x_{ij}$) is normalized to create a common scale ($n_{ij}$) using the vector normalization formula:")
+                    st.markdown("Each value $x_{ij}$ is normalized to create a common scale $n_{ij}$ using the vector normalization formula:")
                     st.latex(r'''
                         n_{ij} = \frac{x_{ij}}{\sqrt{\sum_{k=1}^{m} x_{kj}^2}}
                     ''')
