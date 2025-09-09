@@ -6,7 +6,6 @@ import numpy as np
 st.set_page_config(page_title="Empowering Sustainable Futures", page_icon="🌐", layout="wide")
 
 # --- Helper Function for MOORA (Correct & Standard Implementation) ---
-### NEW: The function is updated to return the intermediate matrices for transparency.
 def moora_method(df, weights, criteria_types):
     """
     Performs the standard MOORA method calculation and returns all intermediate steps.
@@ -14,9 +13,7 @@ def moora_method(df, weights, criteria_types):
     # 1. Normalization (Vector Normalization)
     norm_df = df.copy()
     for col in df.columns:
-        # Calculate the denominator (root of sum of squares)
         denominator = np.sqrt((df[col]**2).sum())
-        # Avoid division by zero if a column is all zeros
         if denominator == 0:
             norm_df[col] = 0
         else:
@@ -30,7 +27,6 @@ def moora_method(df, weights, criteria_types):
     # 3. Calculate Performance Score (Yi)
     scores = []
     for i in range(len(weighted_df)):
-        # Use 'Benefit' and 'Cost' terms as per the UI
         benefit_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'Benefit')
         cost_score = sum(weighted_df.iloc[i][col] for col, c_type in criteria_types.items() if c_type == 'Cost')
         scores.append(benefit_score - cost_score)
@@ -39,7 +35,6 @@ def moora_method(df, weights, criteria_types):
     result_df = pd.DataFrame({'MOORA Score': scores}, index=df.index)
     result_df['Rank'] = result_df['MOORA Score'].rank(ascending=False).astype(int)
     
-    ### NEW: Return all three key matrices.
     return norm_df, weighted_df, result_df.sort_values(by='Rank')
 
 # --- Main Application UI ---
@@ -87,10 +82,8 @@ if uploaded_file is not None:
             if st.sidebar.button("🚀 Calculate Ranks", type="primary", use_container_width=True):
                 st.write("### MOORA Ranking Results")
                 
-                ### NEW: Capture all three returned DataFrames.
                 normalized_matrix, weighted_matrix, final_ranking = moora_method(df_criteria, weights, impacts)
                 
-                # Display final results with gradient coloring
                 st.dataframe(
                     final_ranking.style.format({'MOORA Score': "{:.4f}"})
                                       .background_gradient(cmap='viridis_r', subset=['Rank']),
@@ -100,24 +93,37 @@ if uploaded_file is not None:
                 st.write("### Ranking Visualization")
                 st.bar_chart(final_ranking[['MOORA Score']])
                 
-                st.markdown("---") # Add a separator
+                st.markdown("---")
 
-                ### NEW: Add an expander to show the step-by-step calculations.
                 with st.expander("View Step-by-Step Calculation Details"):
                     st.subheader("Step 1: Initial Decision Matrix (Your Data)")
                     st.write("This is the raw data used for the calculation, containing only the numeric criteria.")
                     st.dataframe(df_criteria)
 
                     st.subheader("Step 2: Normalized Decision Matrix")
-                    st.write("Each value is normalized by dividing it by the square root of the sum of the squares of its column. This puts all criteria on a common scale.")
+                    st.write("Each value (x_ij) is normalized to create a common scale (n_ij) using the vector normalization formula:")
+                    ### NEW: Added the normalization formula.
+                    st.latex(r'''
+                        n_{ij} = \frac{x_{ij}}{\sqrt{\sum_{k=1}^{m} x_{kj}^2}}
+                    ''')
+                    st.write("Where *m* is the total number of alternatives.")
                     st.dataframe(normalized_matrix.style.format("{:.4f}"))
 
                     st.subheader("Step 3: Weighted Normalized Decision Matrix")
-                    st.write("The normalized values are multiplied by their corresponding weights to reflect their importance.")
+                    st.write("The normalized values (n_ij) are multiplied by their corresponding criterion weight (w_j) to get the weighted value (v_ij):")
+                    ### NEW: Added the weighting formula.
+                    st.latex(r'''
+                        v_{ij} = w_j \times n_{ij}
+                    ''')
                     st.dataframe(weighted_matrix.style.format("{:.4f}"))
                     
                     st.subheader("Step 4: Final Score Calculation")
-                    st.write("The final MOORA score is calculated by summing the weighted 'Benefit' criteria and subtracting the weighted 'Cost' criteria for each alternative. This leads to the final rank.")
+                    st.write("The final MOORA score (Y_i) for each alternative is calculated by summing the weighted values for 'Benefit' criteria and subtracting the weighted values for 'Cost' criteria:")
+                    ### NEW: Added the final score calculation formula.
+                    st.latex(r'''
+                        Y_i = \sum_{j=1}^{g} v_{ij} - \sum_{j=g+1}^{n} v_{ij}
+                    ''')
+                    st.write("Where *g* is the number of benefit criteria and *(n-g)* is the number of cost criteria.")
                     st.dataframe(final_ranking.style.format({'MOORA Score': "{:.4f}"}))
 
         else:
