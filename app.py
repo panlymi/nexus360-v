@@ -101,8 +101,8 @@ if uploaded_file is not None:
                     st.dataframe(df_criteria)
 
                     st.subheader("Step 2: Normalized Decision Matrix")
+                    ### NEW: Updated to st.markdown for proper symbol rendering ###
                     st.markdown("Each value ($x_{ij}$) is normalized to create a common scale ($n_{ij}$) using the vector normalization formula:")
-                    ### NEW: Added the normalization formula.
                     st.latex(r'''
                         n_{ij} = \frac{x_{ij}}{\sqrt{\sum_{k=1}^{m} x_{kj}^2}}
                     ''')
@@ -110,16 +110,16 @@ if uploaded_file is not None:
                     st.dataframe(normalized_matrix.style.format("{:.4f}"))
 
                     st.subheader("Step 3: Weighted Normalized Decision Matrix")
-                   st.markdown("The normalized values ($n_{ij}$) are multiplied by their corresponding criterion weight ($w_j$) to get the weighted value ($v_{ij}$):")
-                    ### NEW: Added the weighting formula.
+                    ### NEW: Updated to st.markdown for proper symbol rendering ###
+                    st.markdown("The normalized values ($n_{ij}$) are multiplied by their corresponding criterion weight ($w_j$) to get the weighted value ($v_{ij}$):")
                     st.latex(r'''
                         v_{ij} = w_j \times n_{ij}
                     ''')
                     st.dataframe(weighted_matrix.style.format("{:.4f}"))
                     
                     st.subheader("Step 4: Final Score Calculation")
+                    ### NEW: Updated to st.markdown for proper symbol rendering ###
                     st.markdown("The final MOORA score ($Y_i$) for each alternative is calculated by summing the weighted values for 'Benefit' criteria and subtracting the weighted values for 'Cost' criteria:")
-                    ### NEW: Added the final score calculation formula.
                     st.latex(r'''
                         Y_i = \sum_{j=1}^{g} v_{ij} - \sum_{j=g+1}^{n} v_{ij}
                     ''')
