@@ -111,7 +111,7 @@ if uploaded_file is not None:
 
                     st.subheader("Step 3: Weighted Normalized Decision Matrix")
                     ### NEW: Updated to st.markdown for proper symbol rendering ###
-                    st.markdown("The normalized values ($n_{ij}$) are multiplied by their corresponding criterion weight ($w_j$) to get the weighted value ($v_{ij}$):")
+                    st.markdown("The normalized values $n_{ij}$ are multiplied by their corresponding criterion weight $w_j$ to get the weighted value $v_{ij}$:")
                     st.latex(r'''
                         v_{ij} = w_j \times n_{ij}
                     ''')
@@ -119,7 +119,7 @@ if uploaded_file is not None:
                     
                     st.subheader("Step 4: Final Score Calculation")
                     ### NEW: Updated to st.markdown for proper symbol rendering ###
-                    st.markdown("The final MOORA score ($Y_i$) for each alternative is calculated by summing the weighted values for 'Benefit' criteria and subtracting the weighted values for 'Cost' criteria:")
+                    st.markdown("The final MOORA score $Y_i$ for each alternative is calculated by summing the weighted values for 'Benefit' criteria and subtracting the weighted values for 'Cost' criteria:")
                     st.latex(r'''
                         Y_i = \sum_{j=1}^{g} v_{ij} - \sum_{j=g+1}^{n} v_{ij}
                     ''')
