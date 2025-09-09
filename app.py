@@ -66,7 +66,7 @@ if uploaded_file is not None:
             options=df_input.columns
         )
         
-        criteria_cols = st.sidebar.multoselect(
+        criteria_cols = st.sidebar.multiselect(
             "2. Select your 'Criteria' columns (must be numeric)",
             options=[col for col in df_input.columns if col != alt_col and pd.api.types.is_numeric_dtype(df_input[col])]
         )
