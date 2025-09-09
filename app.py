@@ -6,14 +6,21 @@ import numpy as np
 st.set_page_config(page_title="Empowering Sustainable Futures", page_icon="🌐", layout="wide")
 
 # --- Helper Function for MOORA (Correct & Standard Implementation) ---
+### NEW: The function is updated to return the intermediate matrices for transparency.
 def moora_method(df, weights, criteria_types):
     """
-    Performs the standard MOORA method calculation.
+    Performs the standard MOORA method calculation and returns all intermediate steps.
     """
     # 1. Normalization (Vector Normalization)
     norm_df = df.copy()
     for col in df.columns:
-        norm_df[col] = df[col] / np.sqrt((df[col]**2).sum())
+        # Calculate the denominator (root of sum of squares)
+        denominator = np.sqrt((df[col]**2).sum())
+        # Avoid division by zero if a column is all zeros
+        if denominator == 0:
+            norm_df[col] = 0
+        else:
+            norm_df[col] = df[col] / denominator
     
     # 2. Weighted Normalization
     weighted_df = norm_df.copy()
@@ -31,10 +38,11 @@ def moora_method(df, weights, criteria_types):
     # 4. Create Final DataFrame with Scores and Ranks
     result_df = pd.DataFrame({'MOORA Score': scores}, index=df.index)
     result_df['Rank'] = result_df['MOORA Score'].rank(ascending=False).astype(int)
-    return result_df.sort_values(by='Rank')
+    
+    ### NEW: Return all three key matrices.
+    return norm_df, weighted_df, result_df.sort_values(by='Rank')
 
 # --- Main Application UI ---
-# NEW LINES
 st.title("Empowering Sustainable Futures with Big Data")
 st.subheader("A Smart Framework for Ranking Complex Alternatives using MOORA")
 st.markdown("""
@@ -45,30 +53,26 @@ Upload your data to begin.
 uploaded_file = st.file_uploader("Upload your Excel or CSV file", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
-    # Load data from the uploaded file
     try:
         df_input = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
 
         st.write("### Data Preview:")
         st.dataframe(df_input.head())
 
-        # --- User Configuration using columns for a clean layout ---
         st.sidebar.header("Configuration")
         
-        # FIX 1: Explicitly separate Alternative from Criteria columns
         alt_col = st.sidebar.selectbox(
             "1. Select your 'Alternative' column (non-numeric)",
             options=df_input.columns
         )
         
-        criteria_cols = st.sidebar.multiselect(
+        criteria_cols = st.sidebar.multoselect(
             "2. Select your 'Criteria' columns (must be numeric)",
             options=[col for col in df_input.columns if col != alt_col and pd.api.types.is_numeric_dtype(df_input[col])]
         )
 
         if criteria_cols:
-            # Create a clean DataFrame with only the numeric criteria
-            df_criteria = df_input.set_index(alt_col)[criteria_cols]
+            df_criteria = df_input.set_index(alt_col)[criteria_cols].dropna()
 
             st.sidebar.subheader("3. Set Weights and Impacts")
             weights = {}
@@ -81,21 +85,40 @@ if uploaded_file is not None:
                 st.sidebar.markdown("---")
 
             if st.sidebar.button("🚀 Calculate Ranks", type="primary", use_container_width=True):
-                # Perform calculation and display results
                 st.write("### MOORA Ranking Results")
                 
-                final_ranking = moora_method(df_criteria, weights, impacts)
+                ### NEW: Capture all three returned DataFrames.
+                normalized_matrix, weighted_matrix, final_ranking = moora_method(df_criteria, weights, impacts)
                 
-                # Display results with gradient coloring
+                # Display final results with gradient coloring
                 st.dataframe(
                     final_ranking.style.format({'MOORA Score': "{:.4f}"})
                                       .background_gradient(cmap='viridis_r', subset=['Rank']),
                     use_container_width=True
                 )
                 
-                # Plot the ranking
                 st.write("### Ranking Visualization")
                 st.bar_chart(final_ranking[['MOORA Score']])
+                
+                st.markdown("---") # Add a separator
+
+                ### NEW: Add an expander to show the step-by-step calculations.
+                with st.expander("View Step-by-Step Calculation Details"):
+                    st.subheader("Step 1: Initial Decision Matrix (Your Data)")
+                    st.write("This is the raw data used for the calculation, containing only the numeric criteria.")
+                    st.dataframe(df_criteria)
+
+                    st.subheader("Step 2: Normalized Decision Matrix")
+                    st.write("Each value is normalized by dividing it by the square root of the sum of the squares of its column. This puts all criteria on a common scale.")
+                    st.dataframe(normalized_matrix.style.format("{:.4f}"))
+
+                    st.subheader("Step 3: Weighted Normalized Decision Matrix")
+                    st.write("The normalized values are multiplied by their corresponding weights to reflect their importance.")
+                    st.dataframe(weighted_matrix.style.format("{:.4f}"))
+                    
+                    st.subheader("Step 4: Final Score Calculation")
+                    st.write("The final MOORA score is calculated by summing the weighted 'Benefit' criteria and subtracting the weighted 'Cost' criteria for each alternative. This leads to the final rank.")
+                    st.dataframe(final_ranking.style.format({'MOORA Score': "{:.4f}"}))
 
         else:
             st.info("Please select your criteria columns in the sidebar to proceed.")
